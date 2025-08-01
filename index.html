@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardPlay - Score Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Home Screen -->
+    <div id="homeScreen" class="screen active">
+        <div class="container">
+            <h1 class="app-title">CardPlay</h1>
+            <p class="subtitle">Score Calculator for Card Games</p>
+            <div class="game-buttons">
+                <button class="game-btn" onclick="showPlayerSelection('325')">
+                    <span class="game-title">3 2 5</span>
+                    <span class="game-desc">3 Players Only</span>
+                </button>
+                <button class="game-btn" onclick="showPlayerSelection('plusminus')">
+                    <span class="game-title">Plus Minus</span>
+                    <span class="game-desc">3-4 Players</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Selection Screen -->
+    <div id="playerSelectionScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button class="back-btn" onclick="showHome()">←</button>
+                <h2 id="selectionTitle">Select Players</h2>
+            </div>
+            
+            <div class="player-selection">
+                <p id="selectionInstructions">Select players for the game:</p>
+                <div class="players-list">
+                    <label class="player-checkbox">
+                        <input type="checkbox" value="Ankit" onchange="updatePlayerSelection()">
+                        <span class="checkmark"></span>
+                        Ankit
+                    </label>
+                    <label class="player-checkbox">
+                        <input type="checkbox" value="Karan" onchange="updatePlayerSelection()">
+                        <span class="checkmark"></span>
+                        Karan
+                    </label>
+                    <label class="player-checkbox">
+                        <input type="checkbox" value="Manish" onchange="updatePlayerSelection()">
+                        <span class="checkmark"></span>
+                        Manish
+                    </label>
+                    <label class="player-checkbox">
+                        <input type="checkbox" value="Shubham" onchange="updatePlayerSelection()">
+                        <span class="checkmark"></span>
+                        Shubham
+                    </label>
+                </div>
+                <button id="startGameBtn" class="start-btn" onclick="startGame()" disabled>
+                    Start Game (0/3)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button class="back-btn" onclick="showPlayerSelection(currentGameType)">←</button>
+                <h2 id="gameTitle">Game</h2>
+                <button class="exit-btn" onclick="showWinner()">Exit</button>
+            </div>
+
+            <!-- Score Table -->
+            <div class="score-table">
+                <div class="table-header" id="tableHeader">
+                    <!-- Player initials will be added here -->
+                </div>
+                <div class="table-body" id="tableBody">
+                    <!-- Score rows will be added here -->
+                </div>
+                <div class="table-footer" id="tableFooter">
+                    <!-- Totals will be added here -->
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="input-row" id="inputRow">
+                    <!-- Input fields will be added here -->
+                </div>
+                <button class="add-round-btn" onclick="addRound()">Add Round</button>
+                <div id="gameRules">
+                    <!-- Game rules will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winner Modal -->
+    <div id="winnerModal" class="modal">
+        <div class="modal-content">
+            <h2>🏆 Game Over!</h2>
+            <p id="winnerText"></p>
+            <div class="modal-buttons">
+                <button onclick="closeWinnerModal()">Continue Playing</button>
+                <button onclick="goHome()" class="primary">Back to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
