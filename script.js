@@ -656,9 +656,6 @@ document.addEventListener('keydown', function(e) {
 
 // Score toggle function
 function toggleScore(roundIndex, playerIndex) {
-    // Only allow toggling in 3-2-5 game
-    if (currentGameType !== '325') return;
-    
     // Get the current score
     const currentScore = gameScores[roundIndex][playerIndex];
     
@@ -668,30 +665,40 @@ function toggleScore(roundIndex, playerIndex) {
     // Update the score in the game data
     gameScores[roundIndex][playerIndex] = newScore;
     
-    // Initialize point distribution for this round if it doesn't exist
-    if (!pointDistribution[roundIndex]) {
-        pointDistribution[roundIndex] = {};
-        // Initialize all players for this round
-        gameScores[roundIndex].forEach((score, pIndex) => {
-            pointDistribution[roundIndex][pIndex] = {
-                target: Math.abs(score),
-                failed: score < 0,
-                madeBy: score < 0 ? [] : [pIndex]
+    if (currentGameType === '325') {
+        // Handle 3-2-5 game with point distribution
+        
+        // Initialize point distribution for this round if it doesn't exist
+        if (!pointDistribution[roundIndex]) {
+            pointDistribution[roundIndex] = {};
+            // Initialize all players for this round
+            gameScores[roundIndex].forEach((score, pIndex) => {
+                pointDistribution[roundIndex][pIndex] = {
+                    target: Math.abs(score),
+                    failed: score < 0,
+                    madeBy: score < 0 ? [] : [pIndex]
+                };
+            });
+        }
+        
+        // Handle point distribution update
+        if (newScore < 0) {
+            // Score became negative - ask who made the points
+            showSinglePlayerDistributionModal(roundIndex, playerIndex, Math.abs(newScore));
+        } else {
+            // Score became positive - player made their own points
+            pointDistribution[roundIndex][playerIndex] = {
+                target: newScore,
+                failed: false,
+                madeBy: [playerIndex]
             };
-        });
-    }
-    
-    // Handle point distribution update
-    if (newScore < 0) {
-        // Score became negative - ask who made the points
-        showSinglePlayerDistributionModal(roundIndex, playerIndex, Math.abs(newScore));
+            
+            // Recalculate totals and update display
+            recalculateTotals();
+            updateScoreDisplay();
+        }
     } else {
-        // Score became positive - player made their own points
-        pointDistribution[roundIndex][playerIndex] = {
-            target: newScore,
-            failed: false,
-            madeBy: [playerIndex]
-        };
+        // Handle Plus Minus game - simple toggle without point distribution
         
         // Recalculate totals and update display
         recalculateTotals();
