@@ -3,6 +3,7 @@ let currentGameType = '';
 let selectedPlayers = [];
 let gameScores = [];
 let playerTotals = [];
+let pointDistribution = []; // Track who made which points in 3-2-5 game
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
@@ -106,6 +107,7 @@ function startGame() {
 function resetGame() {
     gameScores = [];
     playerTotals = selectedPlayers.map(() => 0);
+    pointDistribution = [];
 }
 
 function setupGameTable() {
@@ -199,6 +201,11 @@ function addRound() {
     // Add scores to game
     gameScores.push(scores);
     
+    // Handle point distribution for 3-2-5 game
+    if (currentGameType === '325') {
+        handlePointDistribution(scores);
+    }
+    
     // Update totals
     scores.forEach((score, index) => {
         playerTotals[index] += score;
@@ -281,19 +288,84 @@ function validatePlusMinusScores(scores) {
     return { valid: true };
 }
 
+function handlePointDistribution(scores) {
+    // Check for negative scores (failed targets)
+    const hasNegativeScores = scores.some(score => score < 0);
+    
+    if (hasNegativeScores) {
+        // Ask who made the points for failed players
+        const roundDistribution = {};
+        
+        scores.forEach((score, playerIndex) => {
+            if (score < 0) {
+                // This player failed, ask who made their points
+                const targetValue = Math.abs(score);
+                roundDistribution[playerIndex] = {
+                    target: targetValue,
+                    failed: true,
+                    madeBy: [] // Will be filled by user input
+                };
+            } else {
+                roundDistribution[playerIndex] = {
+                    target: score,
+                    failed: false,
+                    madeBy: [playerIndex] // Made their own points
+                };
+            }
+        });
+        
+        pointDistribution.push(roundDistribution);
+        
+        // Show point distribution modal for failed players
+        showPointDistributionModal(scores);
+    } else {
+        // No failures, everyone made their own points
+        const roundDistribution = {};
+        scores.forEach((score, playerIndex) => {
+            roundDistribution[playerIndex] = {
+                target: score,
+                failed: false,
+                madeBy: [playerIndex]
+            };
+        });
+        pointDistribution.push(roundDistribution);
+    }
+}
+
 function addScoreRow(scores) {
     const tableBody = document.getElementById('tableBody');
     const row = document.createElement('div');
     row.className = 'score-row';
     const roundIndex = gameScores.length - 1; // Current round index
     
-    row.innerHTML = scores.map((score, playerIndex) => 
-        `<div class="score-cell ${score < 0 ? 'negative' : 'positive'}" 
-              onclick="toggleScore(${roundIndex}, ${playerIndex})" 
-              title="Click to toggle failed/success">
-            ${score}
-        </div>`
-    ).join('');
+    row.innerHTML = scores.map((score, playerIndex) => {
+        let cellContent = `${score}`;
+        let distributionText = '';
+        
+        // Add distribution info for 3-2-5 game
+        if (currentGameType === '325' && pointDistribution[roundIndex]) {
+            const distribution = pointDistribution[roundIndex][playerIndex];
+            if (distribution && distribution.failed && distribution.distribution) {
+                const distributionParts = [];
+                Object.entries(distribution.distribution).forEach(([pIndex, amount]) => {
+                    if (amount > 0 && parseInt(pIndex) !== playerIndex) {
+                        const playerName = selectedPlayers[parseInt(pIndex)];
+                        distributionParts.push(`${playerName}: ${amount}`);
+                    }
+                });
+                if (distributionParts.length > 0) {
+                    distributionText = `<div class="distribution-text">${distributionParts.join(', ')}</div>`;
+                }
+            }
+        }
+        
+        return `<div class="score-cell ${score < 0 ? 'negative' : 'positive'}" 
+                     onclick="toggleScore(${roundIndex}, ${playerIndex})" 
+                     title="Click to toggle failed/success">
+                    ${cellContent}
+                    ${distributionText}
+                </div>`;
+    }).join('');
     
     tableBody.appendChild(row);
     
@@ -345,6 +417,71 @@ function showWinner() {
     document.getElementById('winnerModal').classList.add('active');
 }
 
+function showPointDistributionModal(scores) {
+    const failedPlayers = [];
+    scores.forEach((score, index) => {
+        if (score < 0) {
+            failedPlayers.push({
+                index: index,
+                name: selectedPlayers[index],
+                target: Math.abs(score)
+            });
+        }
+    });
+    
+    if (failedPlayers.length === 0) return;
+    
+    // Create modal content
+    let modalContent = '<h3>Point Distribution</h3>';
+    modalContent += '<p>Who made the points for failed players?</p>';
+    
+    failedPlayers.forEach(player => {
+        modalContent += `
+            <div class="distribution-question">
+                <strong>${player.name}</strong> failed to make <strong>${player.target}</strong> points.
+                <br>Who made these points?
+                <div class="player-checkboxes">
+        `;
+        
+        selectedPlayers.forEach((otherPlayer, otherIndex) => {
+            if (otherIndex !== player.index) {
+                modalContent += `
+                    <label>
+                        <input type="checkbox" name="made-${player.index}" value="${otherIndex}">
+                        ${otherPlayer}
+                    </label>
+                `;
+            }
+        });
+        
+        modalContent += '</div></div>';
+    });
+    
+    modalContent += '<button onclick="savePointDistribution()" class="primary">Save Distribution</button>';
+    
+    // Show modal (you'll need to create this modal in HTML)
+    showCustomModal(modalContent);
+}
+
+function savePointDistribution() {
+    const roundIndex = pointDistribution.length - 1;
+    const distribution = pointDistribution[roundIndex];
+    
+    // Update distribution based on user input
+    Object.keys(distribution).forEach(playerIndex => {
+        const playerData = distribution[playerIndex];
+        if (playerData.failed) {
+            const checkboxes = document.querySelectorAll(`input[name="made-${playerIndex}"]:checked`);
+            playerData.madeBy = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+    });
+    
+    // Close modal and refresh display
+    closeCustomModal();
+    recalculateTotals();
+    updateScoreDisplay();
+}
+
 function closeWinnerModal() {
     document.getElementById('winnerModal').classList.remove('active');
 }
@@ -352,6 +489,131 @@ function closeWinnerModal() {
 function goHome() {
     closeWinnerModal();
     showHome();
+}
+
+// Custom modal functions
+function showCustomModal(content) {
+    // Use the existing winner modal structure
+    const modal = document.getElementById('winnerModal');
+    const modalContent = modal.querySelector('.modal-content');
+    modalContent.innerHTML = content;
+    modal.classList.add('active');
+}
+
+function closeCustomModal() {
+    document.getElementById('winnerModal').classList.remove('active');
+}
+
+function showSinglePlayerDistributionModal(roundIndex, playerIndex, targetValue) {
+    const playerName = selectedPlayers[playerIndex];
+    
+    // Create modal content for single player
+    let modalContent = '<h3>Point Distribution</h3>';
+    modalContent += `<p><strong>${playerName}</strong> aimed for <strong>${targetValue}</strong> points.</p>`;
+    modalContent += '<p>How much did each player make?</p>';
+    
+    modalContent += `
+        <div class="distribution-question">
+            <div class="point-inputs">
+
+    `;
+    
+    selectedPlayers.forEach((otherPlayer, otherIndex) => {
+        if (otherIndex !== playerIndex) {
+            modalContent += `
+                <div class="player-input">
+                    <label>${otherPlayer}:</label>
+                    <input type="number" id="player-${otherIndex}" min="0" max="${targetValue}" placeholder="0" value="0">
+                </div>
+            `;
+        }
+    });
+    
+    modalContent += `
+            </div>
+            <div class="total-check">
+                <span>Others made: <span id="current-total">0</span> / ${targetValue}</span>
+            </div>
+        </div>
+        <button onclick="saveSinglePlayerDistribution(${roundIndex}, ${playerIndex}, ${targetValue})" class="primary">Save Distribution</button>
+        <button onclick="cancelDistribution(${roundIndex}, ${playerIndex})" style="margin-left: 10px;">Cancel</button>
+    `;
+    
+    // Show modal
+    showCustomModal(modalContent);
+    
+    // Add event listeners to update total
+    setTimeout(() => {
+        const inputs = document.querySelectorAll('.point-inputs input[type="number"]');
+        inputs.forEach(input => {
+            input.addEventListener('input', updateDistributionTotal);
+        });
+    }, 100);
+}
+
+function updateDistributionTotal() {
+    const inputs = document.querySelectorAll('.point-inputs input[type="number"]');
+    let total = 0;
+    inputs.forEach(input => {
+        const value = parseInt(input.value) || 0;
+        total += value;
+    });
+    document.getElementById('current-total').textContent = total;
+}
+
+function saveSinglePlayerDistribution(roundIndex, playerIndex, targetValue) {
+    // Get how much each other player made
+    const distribution = {};
+    let othersTotal = 0;
+    
+    selectedPlayers.forEach((_, otherIndex) => {
+        if (otherIndex !== playerIndex) {
+            const made = parseInt(document.getElementById(`player-${otherIndex}`).value) || 0;
+            if (made > 0) {
+                distribution[otherIndex] = made;
+                othersTotal += made;
+            }
+        }
+    });
+    
+    // Calculate how much the failed player made themselves
+    const selfMade = targetValue - othersTotal;
+    if (selfMade < 0) {
+        alert(`Others made too much! Total can't exceed ${targetValue}. Others made: ${othersTotal}`);
+        return;
+    }
+    
+    // Add self-made to distribution for internal tracking
+    if (selfMade > 0) {
+        distribution[playerIndex] = selfMade;
+    }
+    
+    // Update point distribution
+    if (!pointDistribution[roundIndex]) {
+        pointDistribution[roundIndex] = {};
+    }
+    
+    pointDistribution[roundIndex][playerIndex] = {
+        target: targetValue,
+        failed: true,
+        selfMade: selfMade,
+        distribution: distribution
+    };
+    
+    // Close modal and update display
+    closeCustomModal();
+    recalculateTotals();
+    updateScoreDisplay();
+}
+
+function cancelDistribution(roundIndex, playerIndex) {
+    // Revert the score back to positive
+    gameScores[roundIndex][playerIndex] = -gameScores[roundIndex][playerIndex];
+    
+    // Close modal and update display
+    closeCustomModal();
+    recalculateTotals();
+    updateScoreDisplay();
 }
 
 // Error handling
@@ -394,6 +656,9 @@ document.addEventListener('keydown', function(e) {
 
 // Score toggle function
 function toggleScore(roundIndex, playerIndex) {
+    // Only allow toggling in 3-2-5 game
+    if (currentGameType !== '325') return;
+    
     // Get the current score
     const currentScore = gameScores[roundIndex][playerIndex];
     
@@ -403,11 +668,35 @@ function toggleScore(roundIndex, playerIndex) {
     // Update the score in the game data
     gameScores[roundIndex][playerIndex] = newScore;
     
-    // Recalculate totals
-    recalculateTotals();
+    // Initialize point distribution for this round if it doesn't exist
+    if (!pointDistribution[roundIndex]) {
+        pointDistribution[roundIndex] = {};
+        // Initialize all players for this round
+        gameScores[roundIndex].forEach((score, pIndex) => {
+            pointDistribution[roundIndex][pIndex] = {
+                target: Math.abs(score),
+                failed: score < 0,
+                madeBy: score < 0 ? [] : [pIndex]
+            };
+        });
+    }
     
-    // Update the display
-    updateScoreDisplay();
+    // Handle point distribution update
+    if (newScore < 0) {
+        // Score became negative - ask who made the points
+        showSinglePlayerDistributionModal(roundIndex, playerIndex, Math.abs(newScore));
+    } else {
+        // Score became positive - player made their own points
+        pointDistribution[roundIndex][playerIndex] = {
+            target: newScore,
+            failed: false,
+            madeBy: [playerIndex]
+        };
+        
+        // Recalculate totals and update display
+        recalculateTotals();
+        updateScoreDisplay();
+    }
 }
 
 function recalculateTotals() {
@@ -434,13 +723,34 @@ function updateScoreDisplay() {
         const row = document.createElement('div');
         row.className = 'score-row';
         
-        row.innerHTML = roundScores.map((score, playerIndex) => 
-            `<div class="score-cell ${score < 0 ? 'negative' : 'positive'}" 
-                  onclick="toggleScore(${roundIndex}, ${playerIndex})" 
-                  title="Click to toggle failed/success">
-                ${score}
-            </div>`
-        ).join('');
+        row.innerHTML = roundScores.map((score, playerIndex) => {
+            let cellContent = `${score}`;
+            let distributionText = '';
+            
+            // Add distribution info for 3-2-5 game
+            if (currentGameType === '325' && pointDistribution[roundIndex]) {
+                const distribution = pointDistribution[roundIndex][playerIndex];
+                if (distribution && distribution.failed && distribution.distribution) {
+                    const distributionParts = [];
+                    Object.entries(distribution.distribution).forEach(([pIndex, amount]) => {
+                        if (amount > 0 && parseInt(pIndex) !== playerIndex) {
+                            const playerName = selectedPlayers[parseInt(pIndex)];
+                            distributionParts.push(`${playerName}: ${amount}`);
+                        }
+                    });
+                    if (distributionParts.length > 0) {
+                        distributionText = `<div class="distribution-text">${distributionParts.join(', ')}</div>`;
+                    }
+                }
+            }
+            
+            return `<div class="score-cell ${score < 0 ? 'negative' : 'positive'}" 
+                         onclick="toggleScore(${roundIndex}, ${playerIndex})" 
+                         title="Click to toggle failed/success">
+                        ${cellContent}
+                        ${distributionText}
+                    </div>`;
+        }).join('');
         
         tableBody.appendChild(row);
     });
