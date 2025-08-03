@@ -250,6 +250,50 @@ body {
     border-bottom: none;
 }
 
+.score-cell {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    margin: 0 5px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.score-cell.positive {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.score-cell.negative {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.score-cell.clickable:hover {
+    background: rgba(64, 224, 208, 0.2);
+    transform: scale(1.05);
+    cursor: pointer;
+}
+
+.score-cell.locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.score-cell.locked:hover {
+    transform: none;
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.score-cell.locked.negative:hover {
+    background: rgba(244, 67, 54, 0.2);
+}
+
 .score-row > div {
     flex: 1;
     text-align: center;
