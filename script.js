@@ -72,15 +72,15 @@ function updatePlayerSelection() {
 
 function updateStartButton() {
     const startBtn = document.getElementById('startGameBtn');
-    const maxPlayers = currentGameType === '325' ? 3 : 4;
+    const maxPlayers = currentGameType === '325' ? 3 : 5;
     const minPlayers = currentGameType === '325' ? 3 : 3;
     
     if (currentGameType === '325') {
         startBtn.textContent = `Start Game (${selectedPlayers.length}/3)`;
         startBtn.disabled = selectedPlayers.length !== 3;
     } else {
-        startBtn.textContent = `Start Game (${selectedPlayers.length}/3-4)`;
-        startBtn.disabled = selectedPlayers.length < 3;
+        startBtn.textContent = `Start Game (${selectedPlayers.length}/3-5)`;
+        startBtn.disabled = selectedPlayers.length < 3 || selectedPlayers.length > 5;
     }
     
     // Disable checkboxes if max players reached
@@ -97,9 +97,19 @@ function updateStartButton() {
 }
 
 function startGame() {
-    if (selectedPlayers.length >= 3) {
-        resetGame();
-        showGame();
+    const minPlayers = currentGameType === '325' ? 3 : 3;
+    const maxPlayers = currentGameType === '325' ? 3 : 5;
+    
+    if (currentGameType === '325') {
+        if (selectedPlayers.length === 3) {
+            resetGame();
+            showGame();
+        }
+    } else {
+        if (selectedPlayers.length >= 3 && selectedPlayers.length <= 5) {
+            resetGame();
+            showGame();
+        }
     }
 }
 
