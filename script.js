@@ -110,13 +110,22 @@ function resetGame() {
     pointDistribution = [];
 }
 
+function getPlayerInitial(playerName) {
+    // Special case for Sanskar Saini to distinguish from Shubham
+    if (playerName === 'Sanskar Saini') {
+        return 'S.S';
+    }
+    // Default: first letter
+    return playerName.charAt(0);
+}
+
 function setupGameTable() {
     const tableHeader = document.getElementById('tableHeader');
     const tableFooter = document.getElementById('tableFooter');
     
     // Create header
     tableHeader.innerHTML = selectedPlayers.map(player => 
-        `<div>${player.charAt(0)}</div>`
+        `<div>${getPlayerInitial(player)}</div>`
     ).join('');
     
     // Create footer (totals)
@@ -359,9 +368,13 @@ function addScoreRow(scores) {
             }
         }
         
-        return `<div class="score-cell ${score < 0 ? 'negative' : 'positive'}" 
+        const isLastRound = roundIndex === (gameScores.length - 1);
+        const clickableClass = isLastRound ? 'clickable' : 'locked';
+        const titleText = isLastRound ? 'Click to toggle positive/negative' : 'Only last round can be edited';
+        
+        return `<div class="score-cell ${score < 0 ? 'negative' : 'positive'} ${clickableClass}" 
                      onclick="toggleScore(${roundIndex}, ${playerIndex})" 
-                     title="Click to toggle failed/success">
+                     title="${titleText}">
                     ${cellContent}
                     ${distributionText}
                 </div>`;
@@ -656,6 +669,12 @@ document.addEventListener('keydown', function(e) {
 
 // Score toggle function
 function toggleScore(roundIndex, playerIndex) {
+    // Only allow toggling the last (most recent) round
+    const lastRoundIndex = gameScores.length - 1;
+    if (roundIndex !== lastRoundIndex) {
+        return; // Don't allow editing older rounds
+    }
+    
     // Get the current score
     const currentScore = gameScores[roundIndex][playerIndex];
     
@@ -751,9 +770,13 @@ function updateScoreDisplay() {
                 }
             }
             
-            return `<div class="score-cell ${score < 0 ? 'negative' : 'positive'}" 
+            const isLastRound = roundIndex === (gameScores.length - 1);
+            const clickableClass = isLastRound ? 'clickable' : 'locked';
+            const titleText = isLastRound ? 'Click to toggle positive/negative' : 'Only last round can be edited';
+            
+            return `<div class="score-cell ${score < 0 ? 'negative' : 'positive'} ${clickableClass}" 
                          onclick="toggleScore(${roundIndex}, ${playerIndex})" 
-                         title="Click to toggle failed/success">
+                         title="${titleText}">
                         ${cellContent}
                         ${distributionText}
                     </div>`;
